@@ -89,12 +89,18 @@ router.post("/login", async (req, res) => {
     });
   }
 
+  const carritoAnterior = req.session.carrito || [];
+  const cuponAnterior = req.session.cupon || "";
+
   req.session.regenerate((error) => {
     if (error) {
       return res.status(500).json({
         error: "No se pudo iniciar la sesión",
       });
     }
+
+    req.session.carrito = carritoAnterior;
+    req.session.cupon = cuponAnterior;
 
     req.session.cliente = {
       id: cliente.id,

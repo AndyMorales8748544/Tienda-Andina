@@ -97,6 +97,39 @@
       <button id="cerrar-auth" class="btn-secundario">Cerrar</button>
     </dialog>
 
+    <dialog id="modal-carrito">
+      <h2>Mi carrito de compras</h2>
+
+      <div id="items-carrito"></div>
+
+      <div class="cupon-carrito">
+        <input
+          type="text"
+          id="codigo-cupon"
+          placeholder="Código de descuento"
+          aria-label="Código de descuento"
+        />
+
+        <button id="aplicar-cupon">Aplicar</button>
+      </div>
+
+      <p id="mensaje-carrito" role="status"></p>
+
+      <div id="totales-carrito"></div>
+
+      <div class="acciones">
+        <button id="btn-checkout">Finalizar compra</button>
+
+        <button id="vaciar-carrito" class="btn-secundario">
+          Vaciar carrito
+        </button>
+
+        <button id="cerrar-carrito" class="btn-secundario">
+          Seguir comprando
+        </button>
+      </div>
+    </dialog>
+
     <footer>
       <h3>Tienda Andina</h3>
       <p>Artesanía peruana y tradición cultural.</p>

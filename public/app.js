@@ -242,3 +242,217 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
 verificarSesion().catch(() => {
   btnLogin.textContent = "Mi cuenta";
 });
+
+// Carrito de compras
+
+const modalCarrito = document.getElementById("modal-carrito");
+const btnCarrito = document.getElementById("btn-carrito");
+const itemsCarrito = document.getElementById("items-carrito");
+const totalesCarrito = document.getElementById("totales-carrito");
+const mensajeCarrito = document.getElementById("mensaje-carrito");
+
+function moneda(valor) {
+  return `S/ ${Number(valor).toFixed(2)}`;
+}
+
+function mostrarMensajeCarrito(mensaje, error = false) {
+  mensajeCarrito.textContent = mensaje;
+  mensajeCarrito.style.color = error ? "#b91c1c" : "#15803d";
+}
+
+async function peticionCarrito(ruta = "", metodo = "GET", datos) {
+  const opciones = {
+    method: metodo,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  if (datos !== undefined) {
+    opciones.body = JSON.stringify(datos);
+  }
+
+  const respuesta = await fetch(`/api/carrito${ruta}`, opciones);
+
+  const resultado = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(resultado.error || "Error en el carrito");
+  }
+
+  return resultado;
+}
+
+function renderizarCarrito(carrito) {
+  btnCarrito.textContent = `Carrito (${carrito.cantidad})`;
+
+  if (carrito.productos.length === 0) {
+    itemsCarrito.innerHTML = "<p>Tu carrito está vacío.</p>";
+  } else {
+    itemsCarrito.innerHTML = carrito.productos
+      .map(
+        (p) => `
+            <div class="item-carrito">
+                <div>
+                    <h4>${escapar(p.nombre)}</h4>
+                    <p>${moneda(p.precio)} por unidad</p>
+                </div>
+
+                <input type="number"
+                    min="1"
+                    value="${Number(p.cantidad)}"
+                    data-cantidad="${Number(p.id)}"
+                    aria-label="Cantidad">
+
+                <strong>
+                    ${moneda(p.precio * p.cantidad)}
+                </strong>
+
+                <button data-eliminar="${Number(p.id)}">
+                    Eliminar
+                </button>
+            </div>
+        `,
+      )
+      .join("");
+  }
+
+  document.getElementById("codigo-cupon").value = carrito.cupon || "";
+
+  totalesCarrito.innerHTML = `
+        <div class="fila-total">
+            <span>Subtotal</span>
+            <span>${moneda(carrito.subtotal)}</span>
+        </div>
+
+        <div class="fila-total">
+            <span>Descuento</span>
+            <span>- ${moneda(carrito.descuento)}</span>
+        </div>
+
+        <div class="fila-total">
+            <span>Base imponible</span>
+            <span>${moneda(carrito.base)}</span>
+        </div>
+
+        <div class="fila-total">
+            <span>IGV (18%)</span>
+            <span>${moneda(carrito.igv)}</span>
+        </div>
+
+        <div class="fila-total total-final">
+            <span>Total a pagar</span>
+            <span>${moneda(carrito.total)}</span>
+        </div>
+    `;
+
+  document.getElementById("btn-checkout").disabled =
+    carrito.productos.length === 0;
+}
+
+async function cargarCarrito() {
+  const carrito = await peticionCarrito();
+  renderizarCarrito(carrito);
+}
+
+contenedor.addEventListener("click", async (evento) => {
+  const id = evento.target.dataset.agregar;
+
+  if (!id) return;
+
+  try {
+    const carrito = await peticionCarrito("/agregar", "POST", {
+      id: Number(id),
+      cantidad: 1,
+    });
+
+    renderizarCarrito(carrito);
+    mostrarMensajeCarrito("Producto agregado correctamente.");
+
+    if (!modalCarrito.open) {
+      modalCarrito.showModal();
+    }
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+btnCarrito.addEventListener("click", async () => {
+  try {
+    await cargarCarrito();
+    mostrarMensajeCarrito("");
+    modalCarrito.showModal();
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+itemsCarrito.addEventListener("change", async (evento) => {
+  const id = evento.target.dataset.cantidad;
+
+  if (!id) return;
+
+  try {
+    const carrito = await peticionCarrito(`/${id}`, "PUT", {
+      cantidad: Number(evento.target.value),
+    });
+
+    renderizarCarrito(carrito);
+    mostrarMensajeCarrito("Cantidad actualizada.");
+  } catch (error) {
+    mostrarMensajeCarrito(error.message, true);
+    await cargarCarrito();
+  }
+});
+
+itemsCarrito.addEventListener("click", async (evento) => {
+  const id = evento.target.dataset.eliminar;
+
+  if (!id) return;
+
+  try {
+    const carrito = await peticionCarrito(`/${id}`, "DELETE");
+
+    renderizarCarrito(carrito);
+    mostrarMensajeCarrito("Producto eliminado.");
+  } catch (error) {
+    mostrarMensajeCarrito(error.message, true);
+  }
+});
+
+document.getElementById("aplicar-cupon").addEventListener("click", async () => {
+  try {
+    const cupon = document.getElementById("codigo-cupon").value;
+
+    const carrito = await peticionCarrito("/cupon", "POST", { cupon });
+
+    renderizarCarrito(carrito);
+
+    mostrarMensajeCarrito(
+      carrito.cupon ? "Cupón aplicado correctamente." : "Cupón retirado.",
+    );
+  } catch (error) {
+    mostrarMensajeCarrito(error.message, true);
+  }
+});
+
+document
+  .getElementById("vaciar-carrito")
+  .addEventListener("click", async () => {
+    try {
+      const carrito = await peticionCarrito("", "DELETE");
+
+      renderizarCarrito(carrito);
+      mostrarMensajeCarrito("Carrito vacío.");
+    } catch (error) {
+      mostrarMensajeCarrito(error.message, true);
+    }
+  });
+
+document
+  .getElementById("cerrar-carrito")
+  .addEventListener("click", () => modalCarrito.close());
+
+cargarCarrito().catch((error) => {
+  console.error(error.message);
+});
