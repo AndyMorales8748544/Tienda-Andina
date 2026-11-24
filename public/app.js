@@ -107,3 +107,138 @@ categoria.addEventListener("change", cargarProductos);
 
 cargarCategorias();
 cargarProductos();
+
+// Autenticación de clientes
+
+const modalAuth = document.getElementById("modal-auth");
+const formLogin = document.getElementById("form-login");
+const formRegistro = document.getElementById("form-registro");
+const mensajeAuth = document.getElementById("mensaje-auth");
+const panelCuenta = document.getElementById("panel-cuenta");
+const btnLogin = document.getElementById("btn-login");
+const mostrarLogin = document.getElementById("mostrar-login");
+const mostrarRegistro = document.getElementById("mostrar-registro");
+
+function mensajeAutenticacion(mensaje, error = false) {
+  mensajeAuth.textContent = mensaje;
+  mensajeAuth.style.color = error ? "#b91c1c" : "#15803d";
+}
+
+function cambiarFormulario(registro) {
+  formLogin.hidden = registro;
+  formRegistro.hidden = !registro;
+  mensajeAuth.textContent = "";
+}
+
+async function peticionAuth(ruta, datos) {
+  const respuesta = await fetch(`/api/auth/${ruta}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(datos),
+  });
+
+  const resultado = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(resultado.error || "Error de autenticación");
+  }
+
+  return resultado;
+}
+
+async function verificarSesion() {
+  const respuesta = await fetch("/api/auth/sesion");
+  const sesion = await respuesta.json();
+
+  if (sesion.autenticado) {
+    btnLogin.textContent = `Hola, ${sesion.cliente.nombre}`;
+    formLogin.hidden = true;
+    formRegistro.hidden = true;
+    mostrarLogin.hidden = true;
+    mostrarRegistro.hidden = true;
+    panelCuenta.hidden = false;
+
+    document.getElementById("datos-cliente").textContent =
+      `${sesion.cliente.nombre} - ${sesion.cliente.email}`;
+  } else {
+    btnLogin.textContent = "Mi cuenta";
+    panelCuenta.hidden = true;
+    mostrarLogin.hidden = false;
+    mostrarRegistro.hidden = false;
+    cambiarFormulario(false);
+  }
+}
+
+btnLogin.addEventListener("click", async () => {
+  try {
+    await verificarSesion();
+    mensajeAuth.textContent = "";
+    modalAuth.showModal();
+  } catch {
+    alert("No se pudo consultar la sesión.");
+  }
+});
+
+mostrarLogin.addEventListener("click", () => {
+  cambiarFormulario(false);
+});
+
+mostrarRegistro.addEventListener("click", () => {
+  cambiarFormulario(true);
+});
+
+document
+  .getElementById("cerrar-auth")
+  .addEventListener("click", () => modalAuth.close());
+
+formRegistro.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+
+  try {
+    const resultado = await peticionAuth("registro", {
+      nombre: document.getElementById("registro-nombre").value,
+      email: document.getElementById("registro-email").value,
+      password: document.getElementById("registro-password").value,
+    });
+
+    formRegistro.reset();
+    cambiarFormulario(false);
+
+    mensajeAutenticacion(`${resultado.mensaje}. Ahora puedes iniciar sesión.`);
+  } catch (error) {
+    mensajeAutenticacion(error.message, true);
+  }
+});
+
+formLogin.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+
+  try {
+    const resultado = await peticionAuth("login", {
+      email: document.getElementById("login-email").value,
+      password: document.getElementById("login-password").value,
+    });
+
+    formLogin.reset();
+    await verificarSesion();
+    mensajeAutenticacion(resultado.mensaje);
+  } catch (error) {
+    mensajeAutenticacion(error.message, true);
+  }
+});
+
+document.getElementById("btn-logout").addEventListener("click", async () => {
+  try {
+    const resultado = await peticionAuth("logout", {});
+    await verificarSesion();
+    mensajeAutenticacion(resultado.mensaje);
+  } catch (error) {
+    mensajeAutenticacion(error.message, true);
+  }
+});
+
+verificarSesion().catch(() => {
+  btnLogin.textContent = "Mi cuenta";
+});
