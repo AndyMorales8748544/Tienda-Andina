@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tienda Andina | Artesanía peruana</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <h1>Tienda Andina</h1>
+        <span>Tradición, cultura y arte peruano</span>
+      </div>
+
+      <nav>
+        <a href="/">Inicio</a>
+        <a href="#catalogo">Productos</a>
+        <button id="btn-login">Mi cuenta</button>
+        <button id="btn-carrito">Carrito (0)</button>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <span>HECHO EN EL PERÚ</span>
+      <h2>Descubre la esencia de los Andes</h2>
+      <p>
+        Artesanías y textiles inspirados en nuestras tradiciones y elaborados
+        por productores peruanos.
+      </p>
+      <a href="#catalogo" class="btn-primary"> Explorar productos </a>
+    </section>
+
+    <main id="catalogo" class="container">
+      <h2>Nuestros productos</h2>
+      <p>Encuentra piezas únicas de nuestra cultura.</p>
+
+      <div class="filtros">
+        <input
+          type="search"
+          id="buscar"
+          placeholder="Buscar producto..."
+          aria-label="Buscar producto"
+        />
+
+        <select id="categoria" aria-label="Categoría">
+          <option value="">Todas las categorías</option>
+        </select>
+      </div>
+
+      <div id="productos" class="productos"></div>
+    </main>
+
+    <dialog id="modal-producto">
+      <div id="detalle-producto"></div>
+      <button id="cerrar-modal" class="btn-primary">Cerrar</button>
+    </dialog>
+
+    <footer>
+      <h3>Tienda Andina</h3>
+      <p>Artesanía peruana y tradición cultural.</p>
+      <p>© 2026 Tienda Andina | Proyecto académico USIL</p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
