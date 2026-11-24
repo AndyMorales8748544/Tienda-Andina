@@ -60,3 +60,28 @@ jobs:
         with:
           name: reporte-playwright
           path: playwright-report/
+      - name: Security - npm audit
+        run: npm audit --audit-level=high
+
+      - name: Security - Construir imagen Docker
+        run: docker build -t tienda-andina:security .
+
+      - name: Security - Escaneo Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "tienda-andina:security"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+          vuln-type: "os,library"
+          scanners: "vuln"
+
+      - name: Verificar funcionamiento de imagen
+        run: |
+          docker run -d --name tienda-smoke \
+            -p 127.0.0.1:3000:3000 \
+            -e SESSION_SECRET="$(openssl rand -hex 32)" \
+            tienda-andina:security
+          curl --fail --retry 10 --retry-connrefused \
+            --retry-delay 2 http://localhost:3000/api
