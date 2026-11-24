@@ -119,3 +119,8 @@ test("Redondea correctamente los importes monetarios", () => {
   assert.equal(calcularSubtotal(productos), 59.97);
   assert.equal(calcularIGV(59.97), 10.79);
 });
+
+// Simulación temporal de fallo controlado
+test("Validación del Quality Gate ante un fallo", () => {
+  assert.equal(calcularIGV(100), 20);
+});
