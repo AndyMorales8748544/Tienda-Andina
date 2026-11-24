@@ -1,0 +1,17 @@
+node_modules
+.git
+.github
+.env
+.env.*
+data
+coverage
+playwright-report
+test-results
+tests
+docs
+logs
+tmp
+*.db
+*.db-wal
+*.db-shm
+npm-debug.log
