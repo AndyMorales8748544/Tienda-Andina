@@ -1,0 +1,45 @@
+name: CI - Tienda Andina
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Build, Lint y Pruebas
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar y validar sintaxis
+        run: npm run build
+
+      - name: Analizar calidad de codigo
+        run: npm run lint
+
+      - name: Ejecutar pruebas automatizadas
+        run: npm test
+
+      - name: Generar reporte de cobertura
+        run: npm run coverage | tee coverage-report.txt
+        shell: bash
+
+      - name: Publicar reporte de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-cobertura
+          path: coverage-report.txt

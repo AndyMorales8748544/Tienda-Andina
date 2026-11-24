@@ -1,0 +1,35 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Base de datos SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Pruebas y cobertura
+coverage/
+playwright-report/
+test-results/
+
+# Logs
+logs/
+*.log
+
+# Archivos temporales
+tmp/
+__pycache__/
+*.pyc
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
