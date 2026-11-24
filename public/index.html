@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tienda Andina | Artesanía peruana</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <h1>Tienda Andina</h1>
+        <span>Tradición, cultura y arte peruano</span>
+      </div>
+
+      <nav>
+        <a href="/">Inicio</a>
+        <a href="#catalogo">Productos</a>
+        <button id="btn-login">Mi cuenta</button>
+        <button id="btn-carrito">Carrito (0)</button>
+        <button id="btn-pedidos">Mis pedidos</button>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <span>HECHO EN EL PERÚ</span>
+      <h2>Descubre la esencia de los Andes</h2>
+      <p>
+        Artesanías y textiles inspirados en nuestras tradiciones y elaborados
+        por productores peruanos.
+      </p>
+      <a href="#catalogo" class="btn-primary"> Explorar productos </a>
+    </section>
+
+    <main id="catalogo" class="container">
+      <h2>Nuestros productos</h2>
+      <p>Encuentra piezas únicas de nuestra cultura.</p>
+
+      <div class="filtros">
+        <input
+          type="search"
+          id="buscar"
+          placeholder="Buscar producto..."
+          aria-label="Buscar producto"
+        />
+
+        <select id="categoria" aria-label="Categoría">
+          <option value="">Todas las categorías</option>
+        </select>
+      </div>
+
+      <div id="productos" class="productos"></div>
+    </main>
+
+    <dialog id="modal-producto">
+      <div id="detalle-producto"></div>
+      <button id="cerrar-modal" class="btn-primary">Cerrar</button>
+    </dialog>
+
+    <dialog id="modal-auth">
+      <h2 id="titulo-auth">Mi cuenta</h2>
+
+      <div class="acciones">
+        <button id="mostrar-login">Iniciar sesión</button>
+        <button id="mostrar-registro">Registrarme</button>
+      </div>
+
+      <form id="form-login" class="form-auth">
+        <label for="login-email">Correo electrónico</label>
+        <input type="email" id="login-email" required />
+
+        <label for="login-password">Contraseña</label>
+        <input type="password" id="login-password" required />
+
+        <button type="submit">Ingresar</button>
+      </form>
+
+      <form id="form-registro" class="form-auth" hidden>
+        <label for="registro-nombre">Nombre completo</label>
+        <input type="text" id="registro-nombre" required />
+
+        <label for="registro-email">Correo electrónico</label>
+        <input type="email" id="registro-email" required />
+
+        <label for="registro-password">Contraseña</label>
+        <input type="password" id="registro-password" minlength="8" required />
+
+        <button type="submit">Crear cuenta</button>
+      </form>
+
+      <div id="panel-cuenta" hidden>
+        <p id="datos-cliente"></p>
+        <button id="btn-logout">Cerrar sesión</button>
+      </div>
+
+      <p id="mensaje-auth" role="status"></p>
+
+      <button id="cerrar-auth" class="btn-secundario">Cerrar</button>
+    </dialog>
+
+    <dialog id="modal-carrito">
+      <h2>Mi carrito de compras</h2>
+
+      <div id="items-carrito"></div>
+
+      <div class="cupon-carrito">
+        <input
+          type="text"
+          id="codigo-cupon"
+          placeholder="Código de descuento"
+          aria-label="Código de descuento"
+        />
+
+        <button id="aplicar-cupon">Aplicar</button>
+      </div>
+
+      <p id="mensaje-carrito" role="status"></p>
+
+      <div id="totales-carrito"></div>
+
+      <div class="acciones">
+        <button id="btn-checkout">Finalizar compra</button>
+
+        <button id="vaciar-carrito" class="btn-secundario">
+          Vaciar carrito
+        </button>
+
+        <button id="cerrar-carrito" class="btn-secundario">
+          Seguir comprando
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="modal-checkout">
+      <h2>Confirmación de compra</h2>
+
+      <div id="resumen-checkout"></div>
+
+      <p>Medio de pago: tarjeta simulada</p>
+      <p>No se realizará ningún cobro real.</p>
+
+      <p id="mensaje-checkout" role="status"></p>
+
+      <div class="acciones">
+        <button id="confirmar-pago">Confirmar pago</button>
+
+        <button id="cerrar-checkout" class="btn-secundario">Cerrar</button>
+      </div>
+    </dialog>
+
+    <dialog id="modal-pedidos">
+      <h2>Mis pedidos</h2>
+
+      <div id="lista-pedidos"></div>
+
+      <p id="mensaje-pedidos" role="status"></p>
+
+      <button id="cerrar-pedidos" class="btn-secundario">Cerrar</button>
+    </dialog>
+
+    <footer>
+      <h3>Tienda Andina</h3>
+      <p>Artesanía peruana y tradición cultural.</p>
+      <p>© 2026 Tienda Andina | Proyecto académico USIL</p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
