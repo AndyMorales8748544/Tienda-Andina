@@ -7,6 +7,7 @@ const crypto = require("node:crypto");
 const catalogo = require("./catalogo");
 const auth = require("./auth");
 const carrito = require("./carrito");
+const pedidos = require("./pedidos");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use(
 app.use("/api/productos", catalogo);
 app.use("/api/auth", auth);
 app.use("/api/carrito", carrito);
+app.use("/api/pedidos", pedidos);
 
 app.get("/api", (req, res) => {
   res.json({

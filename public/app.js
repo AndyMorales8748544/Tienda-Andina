@@ -456,3 +456,224 @@ document
 cargarCarrito().catch((error) => {
   console.error(error.message);
 });
+
+// Checkout y gestión de pedidos
+
+const modalCheckout = document.getElementById("modal-checkout");
+const modalPedidos = document.getElementById("modal-pedidos");
+const confirmarPago = document.getElementById("confirmar-pago");
+const mensajeCheckout = document.getElementById("mensaje-checkout");
+const mensajePedidos = document.getElementById("mensaje-pedidos");
+const listaPedidos = document.getElementById("lista-pedidos");
+
+let pedidoActual = null;
+
+async function peticionPedidos(ruta = "", metodo = "GET") {
+  const respuesta = await fetch(`/api/pedidos${ruta}`, {
+    method: metodo,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resultado = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(resultado.error || "Error en el pedido");
+  }
+
+  return resultado;
+}
+
+async function clienteAutenticado() {
+  const respuesta = await fetch("/api/auth/sesion");
+  const sesion = await respuesta.json();
+
+  return sesion.autenticado;
+}
+
+document
+  .getElementById("btn-checkout")
+  .addEventListener("click", async (evento) => {
+    const boton = evento.currentTarget;
+    boton.disabled = true;
+
+    try {
+      if (!(await clienteAutenticado())) {
+        modalCarrito.close();
+        btnLogin.click();
+        mensajeAutenticacion("Inicia sesión para finalizar tu compra.");
+        return;
+      }
+
+      const pedido = await peticionPedidos("/checkout", "POST");
+
+      pedidoActual = pedido.pedidoId;
+
+      document.getElementById("resumen-checkout").innerHTML = `
+                <h3>Pedido #${Number(pedido.pedidoId)}</h3>
+                <p>Subtotal: ${moneda(pedido.subtotal)}</p>
+                <p>Descuento: ${moneda(pedido.descuento)}</p>
+                <p>IGV: ${moneda(pedido.igv)}</p>
+                <h3>Total: ${moneda(pedido.total)}</h3>
+                <span class="estado-pedido estado-pendiente">
+                    Pendiente
+                </span>
+            `;
+
+      mensajeCheckout.textContent = "";
+      confirmarPago.disabled = false;
+
+      modalCarrito.close();
+      modalCheckout.showModal();
+
+      await cargarCarrito();
+      await cargarProductos();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      await cargarCarrito().catch(() => {
+        boton.disabled = false;
+      });
+    }
+  });
+
+confirmarPago.addEventListener("click", async () => {
+  if (!pedidoActual) return;
+
+  confirmarPago.disabled = true;
+
+  try {
+    const resultado = await peticionPedidos(`/${pedidoActual}/pagar`, "POST");
+
+    mensajeCheckout.textContent = resultado.mensaje;
+    mensajeCheckout.style.color = "#15803d";
+
+    const estado = document.querySelector("#resumen-checkout .estado-pedido");
+
+    estado.textContent = "Pagado";
+    estado.className = "estado-pedido estado-pagado";
+  } catch (error) {
+    mensajeCheckout.textContent = error.message;
+    mensajeCheckout.style.color = "#b91c1c";
+    confirmarPago.disabled = false;
+  }
+});
+
+document
+  .getElementById("cerrar-checkout")
+  .addEventListener("click", () => modalCheckout.close());
+
+async function cargarPedidos() {
+  const pedidos = await peticionPedidos();
+
+  if (pedidos.length === 0) {
+    listaPedidos.innerHTML = "<p>No tienes pedidos registrados.</p>";
+    return;
+  }
+
+  listaPedidos.innerHTML = pedidos
+    .map(
+      (p) => `
+        <article class="pedido">
+            <h3>Pedido #${Number(p.id)}</h3>
+
+            <p>Fecha: ${escapar(p.fecha)}</p>
+            <p>Total: ${moneda(p.total)}</p>
+
+            <span class="estado-pedido estado-${escapar(p.estado)}">
+                ${escapar(p.estado)}
+            </span>
+
+            <div class="acciones">
+                ${
+                  p.estado === "pendiente"
+                    ? `
+                    <button data-pagar="${Number(p.id)}">
+                        Simular pago
+                    </button>
+                `
+                    : ""
+                }
+
+                ${
+                  p.estado === "pagado"
+                    ? `
+                    <button data-enviar="${Number(p.id)}">
+                        Simular envío
+                    </button>
+                `
+                    : ""
+                }
+
+                <button class="btn-secundario"
+                    data-ver-pedido="${Number(p.id)}">
+                    Ver detalle
+                </button>
+            </div>
+
+            <div id="detalle-pedido-${Number(p.id)}"></div>
+        </article>
+    `,
+    )
+    .join("");
+}
+
+document.getElementById("btn-pedidos").addEventListener("click", async () => {
+  try {
+    if (!(await clienteAutenticado())) {
+      btnLogin.click();
+      return;
+    }
+
+    await cargarPedidos();
+    mensajePedidos.textContent = "";
+    modalPedidos.showModal();
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+listaPedidos.addEventListener("click", async (evento) => {
+  const pagar = evento.target.dataset.pagar;
+  const enviar = evento.target.dataset.enviar;
+  const detalle = evento.target.dataset.verPedido;
+
+  try {
+    if (pagar || enviar) {
+      const id = pagar || enviar;
+      const accion = pagar ? "pagar" : "enviar";
+
+      const resultado = await peticionPedidos(`/${id}/${accion}`, "POST");
+
+      mensajePedidos.textContent = resultado.mensaje;
+      mensajePedidos.style.color = "#15803d";
+
+      await cargarPedidos();
+    }
+
+    if (detalle) {
+      const pedido = await peticionPedidos(`/${detalle}`);
+
+      document.getElementById(`detalle-pedido-${detalle}`).innerHTML =
+        pedido.detalle
+          .map(
+            (p) => `
+                <p>
+                    ${escapar(p.nombre)} —
+                    ${Number(p.cantidad)} unidad(es) —
+                    ${moneda(p.precio_unitario * p.cantidad)}
+                </p>
+            `,
+          )
+          .join("");
+    }
+  } catch (error) {
+    mensajePedidos.textContent = error.message;
+    mensajePedidos.style.color = "#b91c1c";
+  }
+});
+
+document
+  .getElementById("cerrar-pedidos")
+  .addEventListener("click", () => modalPedidos.close());

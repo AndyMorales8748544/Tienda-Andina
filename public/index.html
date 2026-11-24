@@ -18,6 +18,7 @@
         <a href="#catalogo">Productos</a>
         <button id="btn-login">Mi cuenta</button>
         <button id="btn-carrito">Carrito (0)</button>
+        <button id="btn-pedidos">Mis pedidos</button>
       </nav>
     </header>
 
@@ -128,6 +129,33 @@
           Seguir comprando
         </button>
       </div>
+    </dialog>
+
+    <dialog id="modal-checkout">
+      <h2>Confirmación de compra</h2>
+
+      <div id="resumen-checkout"></div>
+
+      <p>Medio de pago: tarjeta simulada</p>
+      <p>No se realizará ningún cobro real.</p>
+
+      <p id="mensaje-checkout" role="status"></p>
+
+      <div class="acciones">
+        <button id="confirmar-pago">Confirmar pago</button>
+
+        <button id="cerrar-checkout" class="btn-secundario">Cerrar</button>
+      </div>
+    </dialog>
+
+    <dialog id="modal-pedidos">
+      <h2>Mis pedidos</h2>
+
+      <div id="lista-pedidos"></div>
+
+      <p id="mensaje-pedidos" role="status"></p>
+
+      <button id="cerrar-pedidos" class="btn-secundario">Cerrar</button>
     </dialog>
 
     <footer>
