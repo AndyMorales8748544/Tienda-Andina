@@ -10,36 +10,53 @@ permissions:
 jobs:
   quality-gate:
     name: Build, Lint y Pruebas
+
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar codigo fuente
+      - name: Obtener codigo fuente
         uses: actions/checkout@v4
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
+          cache: npm
 
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Compilar y validar sintaxis
+      - name: Build
         run: npm run build
 
-      - name: Analizar calidad de codigo
+      - name: Analisis estatico
         run: npm run lint
 
-      - name: Ejecutar pruebas automatizadas
+      - name: Pruebas unitarias e integracion
         run: npm test
 
-      - name: Generar reporte de cobertura
-        run: npm run coverage | tee coverage-report.txt
+      - name: Quality Gate - Cobertura minima 70%
         shell: bash
+        run: |
+          set -o pipefail
+          npm run coverage | tee coverage-report.txt
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Pruebas E2E
+        run: npm run test:e2e
 
       - name: Publicar reporte de cobertura
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reporte-cobertura
           path: coverage-report.txt
+
+      - name: Publicar reporte Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-playwright
+          path: playwright-report/
