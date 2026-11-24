@@ -329,3 +329,63 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+#modal-checkout,
+#modal-pedidos {
+  max-width: 650px;
+}
+
+#modal-checkout h2,
+#modal-pedidos h2 {
+  color: var(--principal);
+  margin-top: 0;
+}
+
+.pedido {
+  padding: 18px;
+  margin: 15px 0;
+  border: 1px solid #e5d8c7;
+  border-radius: 8px;
+  background: var(--crema);
+}
+
+.pedido h3 {
+  margin-top: 0;
+}
+
+.estado-pedido {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.estado-pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.estado-pagado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estado-enviado {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+#resumen-checkout {
+  padding: 20px;
+  background: var(--crema);
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+#mensaje-checkout,
+#mensaje-pedidos {
+  font-weight: bold;
+  font-size: 14px;
+}
