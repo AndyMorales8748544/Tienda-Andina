@@ -33,3 +33,8 @@ Thumbs.db
 
 # Editor
 .vscode/
+
+# Archivos de migracion y datos de clientes
+migration/origen/
+migration/salida/
+migration/backup/
