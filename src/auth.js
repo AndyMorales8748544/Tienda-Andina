@@ -83,7 +83,11 @@ router.post("/login", async (req, res) => {
     )
     .get(email.trim().toLowerCase());
 
-  if (!cliente || !(await bcrypt.compare(password, cliente.password_hash))) {
+  if (
+    !cliente ||
+    cliente.requiere_activacion === 1 ||
+    !(await bcrypt.compare(password, cliente.password_hash))
+  ) {
     return res.status(401).json({
       error: "Correo o contraseña incorrectos",
     });

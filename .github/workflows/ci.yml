@@ -136,9 +136,19 @@ jobs:
       - name: Obtener codigo fuente
         uses: actions/checkout@v4
 
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configurar variables de entorno
+        run: |
+          SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::$SECRET"
+          echo "SESSION_SECRET=$SECRET" >> "$GITHUB_ENV"
+
       - name: Desplegar ambiente STAGING
         run: |
-          export SESSION_SECRET="$(openssl rand -hex 32)"
           docker compose -f docker-compose.ambientes.yml up -d --build staging
 
           sleep 5
@@ -147,9 +157,147 @@ jobs:
 
           curl --fail --retry 10 --retry-all-errors \
             --retry-delay 2 --max-time 5 \
-            http://127.0.0.1:3002/api
+            http://127.0.0.1:3002/health
 
-          echo "Despliegue STAGING exitoso"
+      - name: Recuperar archivos CSV protegidos
+        env:
+          MIGRATION_CLIENTES: ${{ secrets.MIGRATION_CLIENTES }}
+          MIGRATION_PRODUCTOS: ${{ secrets.MIGRATION_PRODUCTOS }}
+        run: |
+          mkdir -p migration/origen migration/backup migration/salida
+
+          test -n "$MIGRATION_CLIENTES"
+          test -n "$MIGRATION_PRODUCTOS"
+
+          printf '%s' "$MIGRATION_CLIENTES" > "migration/origen/clientes(in).csv"
+          printf '%s' "$MIGRATION_PRODUCTOS" > "migration/origen/productos(in).csv"
+
+          echo "Archivos de migracion recuperados correctamente"
+
+      - name: Cutover - Detener staging y generar respaldo
+        run: |
+          docker compose -f docker-compose.ambientes.yml stop staging
+
+          docker cp tienda-andina-staging:/app/data/tienda.db \
+            migration/backup/staging_antes.db
+
+          cp migration/backup/staging_antes.db \
+            migration/backup/staging_migrado.db
+
+          python -c "import sqlite3; c=sqlite3.connect('migration/backup/staging_antes.db'); assert c.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; c.close(); print('Respaldo validado correctamente')"
+
+      - name: Ejecutar migracion ETL
+        run: |
+          python migration/etl.py --db migration/backup/staging_migrado.db
+
+      - name: Validar conciliacion e integridad
+        run: |
+          python - <<'PY'
+          import sqlite3
+
+          db = sqlite3.connect("migration/backup/staging_migrado.db")
+
+          productos = db.execute("SELECT COUNT(*) FROM productos").fetchone()[0]
+          clientes = db.execute("SELECT COUNT(*) FROM clientes").fetchone()[0]
+          pedidos = db.execute("SELECT COUNT(*) FROM pedidos").fetchone()[0]
+
+          integridad = db.execute("PRAGMA integrity_check").fetchone()[0]
+          violaciones = db.execute("PRAGMA foreign_key_check").fetchall()
+
+          print("Productos:", productos)
+          print("Clientes:", clientes)
+          print("Pedidos:", pedidos)
+          print("Integridad:", integridad)
+          print("Violaciones de claves foraneas:", len(violaciones))
+
+          assert productos == 47
+          assert clientes == 50
+          assert pedidos == 0
+          assert integridad == "ok"
+          assert len(violaciones) == 0
+
+          db.close()
+
+          print("Validacion de migracion aprobada")
+          PY
+
+      - name: Instalar base de datos migrada
+        run: |
+          docker cp migration/backup/staging_migrado.db \
+            tienda-andina-staging:/app/data/tienda.db
+
+          docker compose -f docker-compose.ambientes.yml run \
+            --rm --no-deps --user root --entrypoint sh staging \
+            -c "chown node:node /app/data/tienda.db && chmod 644 /app/data/tienda.db"
+
+          docker compose -f docker-compose.ambientes.yml up -d staging
+
+      - name: Validar aplicacion despues de la migracion
+        run: |
+          sleep 5
+
+          curl --fail --retry 10 --retry-all-errors \
+            --retry-delay 2 --max-time 5 \
+            http://127.0.0.1:3002/health
+
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          with urllib.request.urlopen("http://127.0.0.1:3002/health") as response:
+              health = json.load(response)
+
+          assert health["status"] == "UP"
+          assert health["baseDatos"] == "UP"
+
+          with urllib.request.urlopen("http://127.0.0.1:3002/api/productos") as response:
+              productos = json.load(response)
+
+          assert len(productos) == 47
+
+          print("Health Check aprobado")
+          print("Productos disponibles:", len(productos))
+          print("Despliegue STAGING y migracion exitosos")
+          PY
+
+      - name: Publicar reporte de migracion
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-migracion
+          path: migration/salida/reporte_migracion.json
+          if-no-files-found: error
+
+      - name: Rollback automatico ante fallos
+        if: failure()
+        run: |
+          if [ -f migration/backup/staging_antes.db ]; then
+
+            docker compose -f docker-compose.ambientes.yml stop staging
+
+            docker cp migration/backup/staging_antes.db \
+              tienda-andina-staging:/app/data/tienda.db
+
+            docker compose -f docker-compose.ambientes.yml run \
+              --rm --no-deps --user root --entrypoint sh staging \
+              -c "chown node:node /app/data/tienda.db && chmod 644 /app/data/tienda.db"
+
+            docker compose -f docker-compose.ambientes.yml up -d staging
+
+            sleep 5
+
+            curl --fail --retry 10 --retry-all-errors \
+              --retry-delay 2 --max-time 5 \
+              http://127.0.0.1:3002/health
+
+            echo "Rollback automatico ejecutado"
+          else
+            echo "No existe respaldo para restaurar"
+          fi
+
+      - name: Limpiar archivos sensibles
+        if: always()
+        run: |
+          rm -rf migration/origen migration/backup migration/salida
 
   deploy-production:
     name: Despliegue PRODUCCION
