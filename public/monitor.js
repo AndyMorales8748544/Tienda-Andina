@@ -68,6 +68,8 @@ async function actualizarDashboard() {
   }
 }
 
-actualizarDashboard();
+void actualizarDashboard();
 
-setInterval(actualizarDashboard, 5000);
+setInterval(() => {
+  void actualizarDashboard();
+}, 5000);
