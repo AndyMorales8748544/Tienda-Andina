@@ -1,0 +1,51 @@
+services:
+  dev:
+    build: .
+    container_name: tienda-andina-dev
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      NODE_ENV: development
+      APP_ENV: dev
+      PORT: 3000
+      DB_PATH: /app/data/tienda.db
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET requerido}
+      COOKIE_SECURE: "false"
+    volumes:
+      - dev-data:/app/data
+
+  staging:
+    build: .
+    container_name: tienda-andina-staging
+    ports:
+      - "127.0.0.1:3002:3000"
+    environment:
+      NODE_ENV: production
+      APP_ENV: staging
+      PORT: 3000
+      DB_PATH: /app/data/tienda.db
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET requerido}
+      COOKIE_SECURE: "false"
+      ENABLE_INCIDENT_SIMULATION: "false"
+    volumes:
+      - staging-data:/app/data
+
+  produccion:
+    build: .
+    container_name: tienda-andina-produccion
+    ports:
+      - "127.0.0.1:3003:3000"
+    environment:
+      NODE_ENV: production
+      APP_ENV: produccion
+      PORT: 3000
+      DB_PATH: /app/data/tienda.db
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET requerido}
+      COOKIE_SECURE: "false"
+    volumes:
+      - produccion-data:/app/data
+
+volumes:
+  dev-data:
+  staging-data:
+  produccion-data:

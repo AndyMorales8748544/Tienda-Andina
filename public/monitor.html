@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitorizacion | Tienda Andina</title>
+    <link rel="stylesheet" href="/monitor.css" />
+    <script src="/monitor.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Tienda Andina</h1>
+        <p>Panel de monitorizacion y observabilidad</p>
+      </div>
+      <a href="/">Volver a la tienda</a>
+    </header>
+
+    <main>
+      <section class="encabezado">
+        <h2>Estado general del sistema</h2>
+        <p>Ambiente: <strong id="ambiente">--</strong></p>
+      </section>
+
+      <section class="estados">
+        <article class="tarjeta">
+          <h3>Aplicacion</h3>
+          <strong id="estado-app">--</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Base de datos SQLite</h3>
+          <strong id="estado-db">--</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Estado de alerta</h3>
+          <strong id="estado-alerta">--</strong>
+        </article>
+      </section>
+
+      <h2>Indicadores de rendimiento</h2>
+
+      <section class="metricas">
+        <article class="tarjeta">
+          <h3>Pedidos registrados</h3>
+          <strong id="pedidos">0</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Peticiones HTTP</h3>
+          <strong id="peticiones">0</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Tiempo promedio de respuesta</h3>
+          <strong id="tiempo">0 ms</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Errores del servidor (5xx)</h3>
+          <strong id="errores">0</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Tasa de errores 5xx</h3>
+          <strong id="tasa">0%</strong>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Tiempo de actividad</h3>
+          <strong id="uptime">0 s</strong>
+        </article>
+      </section>
+
+      <section id="panel-alerta" class="alerta normal">
+        <h3>Monitor de alertas</h3>
+        <p id="mensaje-alerta">Consultando estado del sistema...</p>
+      </section>
+
+      <footer>
+        <p>Actualizacion automatica cada 5 segundos</p>
+        <p>
+          Ultima actualizacion:
+          <span id="actualizacion">--</span>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
