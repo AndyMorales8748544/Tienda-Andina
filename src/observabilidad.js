@@ -31,20 +31,22 @@ function monitorizarPeticiones(req, res, next) {
     metricas.peticiones++;
     metricas.tiempoTotal += duracion;
 
+    let nivel = "info";
+
     if (res.statusCode >= 500) {
       metricas.errores5xx++;
+      nivel = "error";
+    } else if (res.statusCode >= 400) {
+      nivel = "warn";
     }
 
-    registrarLog(
-      res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
-      {
-        requestId,
-        metodo: req.method,
-        ruta: req.originalUrl.split("?")[0],
-        statusCode: res.statusCode,
-        duracionMs: Number(duracion.toFixed(2)),
-      },
-    );
+    registrarLog(nivel, {
+      requestId,
+      metodo: req.method,
+      ruta: req.originalUrl.split("?")[0],
+      statusCode: res.statusCode,
+      duracionMs: Number(duracion.toFixed(2)),
+    });
   });
 
   next();

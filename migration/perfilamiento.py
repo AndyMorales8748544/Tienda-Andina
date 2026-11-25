@@ -37,10 +37,17 @@ def duplicados(registros, campo):
 
 
 def email_valido(email):
-    return bool(re.fullmatch(
-        r"[^@\s]+@[^@\s]+\.[^@\s]+",
-        email.strip()
-    ))
+    email = email.strip()
+
+    if email.count("@") != 1:
+        return False
+
+    if any(caracter.isspace() for caracter in email):
+        return False
+
+    usuario, dominio = email.split("@")
+
+    return bool(usuario and "." in dominio[1:-1])
 
 
 def fecha_valida(fecha):

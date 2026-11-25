@@ -79,6 +79,83 @@ def registrar_carga(entidad, identificador, cambios):
         resumen[entidad]["aceptados"] += 1
 
 
+
+def validar_campos_producto(fila, motivos):
+    if not fila["sku"]:
+        motivos.append("SKU vacio")
+
+    if not fila["nombre"]:
+        motivos.append("Nombre vacio")
+
+    if not fila["categoria"]:
+        motivos.append("Categoria vacia")
+
+
+def validar_precio_producto(valor, motivos):
+    try:
+        precio = Decimal(valor)
+
+        if not precio.is_finite():
+            motivos.append("Precio invalido")
+        elif precio < 0:
+            motivos.append("Precio negativo")
+
+        return precio
+
+    except InvalidOperation:
+        motivos.append("Precio vacio o invalido")
+        return None
+
+
+def validar_stock_producto(valor, motivos, cambios):
+    if not valor:
+        cambios.append("Stock vacio corregido a 0")
+        return 0
+
+    try:
+        stock = int(valor)
+
+        if stock < 0:
+            motivos.append("Stock negativo")
+
+        return stock
+
+    except ValueError:
+        motivos.append("Stock invalido")
+        return None
+
+
+def validar_sku_duplicado(conn, sku, motivos):
+    existente = conn.execute(
+        """
+        SELECT id FROM productos
+        WHERE sku = ? COLLATE NOCASE
+        """,
+        (sku,)
+    ).fetchone()
+
+    if existente:
+        motivos.append("SKU duplicado en destino")
+
+
+def insertar_producto(conn, fila, precio, stock):
+    conn.execute(
+        """
+        INSERT INTO productos
+        (sku, nombre, categoria, precio, stock, proveedor)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            fila["sku"],
+            fila["nombre"],
+            fila["categoria"],
+            float(precio),
+            stock,
+            fila["proveedor"]
+        )
+    )
+
+
 def migrar_productos(conn, registros):
     entidad = "productos"
     resumen[entidad]["origen"] = len(registros)
@@ -87,80 +164,132 @@ def migrar_productos(conn, registros):
         fila = limpiar(original)
         motivos = []
         cambios = []
-
         sku = fila["sku"]
-        nombre = fila["nombre"]
-        categoria = fila["categoria"]
-        proveedor = fila["proveedor"]
 
         if fila != original:
             cambios.append("Espacios normalizados")
 
-        if not sku:
-            motivos.append("SKU vacio")
+        validar_campos_producto(fila, motivos)
 
-        if not nombre:
-            motivos.append("Nombre vacio")
+        precio = validar_precio_producto(
+            fila["precio"], motivos
+        )
 
-        if not categoria:
-            motivos.append("Categoria vacia")
+        stock = validar_stock_producto(
+            fila["stock"], motivos, cambios
+        )
 
-        try:
-            precio = Decimal(fila["precio"])
-
-            if not precio.is_finite():
-                motivos.append("Precio invalido")
-            elif precio < 0:
-                motivos.append("Precio negativo")
-
-        except InvalidOperation:
-            motivos.append("Precio vacio o invalido")
-
-        if not fila["stock"]:
-            stock = 0
-            cambios.append("Stock vacio corregido a 0")
-        else:
-            try:
-                stock = int(fila["stock"])
-
-                if stock < 0:
-                    motivos.append("Stock negativo")
-
-            except ValueError:
-                motivos.append("Stock invalido")
-
-        existente = conn.execute(
-            """
-            SELECT id FROM productos
-            WHERE sku = ? COLLATE NOCASE
-            """,
-            (sku,)
-        ).fetchone()
-
-        if existente:
-            motivos.append("SKU duplicado en destino")
+        validar_sku_duplicado(conn, sku, motivos)
 
         if motivos:
             rechazar(entidad, sku, original, motivos)
             continue
 
-        conn.execute(
-            """
-            INSERT INTO productos
-            (sku, nombre, categoria, precio, stock, proveedor)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                sku,
-                nombre,
-                categoria,
-                float(precio),
-                stock,
-                proveedor
-            )
-        )
+        insertar_producto(conn, fila, precio, stock)
 
         registrar_carga(entidad, sku, cambios)
+
+
+def email_valido(email):
+    email = email.strip()
+
+    if email.count("@") != 1:
+        return False
+
+    if any(caracter.isspace() for caracter in email):
+        return False
+
+    usuario, dominio = email.split("@")
+
+    return bool(usuario and "." in dominio[1:-1])
+
+
+def validar_campos_cliente(fila, email, motivos, cambios):
+    if not fila["id_cliente"]:
+        motivos.append("Identificador vacio")
+
+    if not fila["nombre"] or not fila["apellido"]:
+        motivos.append("Nombre o apellido vacio")
+
+    if not email_valido(email):
+        motivos.append("Correo invalido")
+
+    if email != fila["email"]:
+        cambios.append("Correo normalizado")
+
+
+def validar_telefono_cliente(telefono, motivos, cambios):
+    if telefono is None:
+        cambios.append("Telefono vacio convertido a NULL")
+
+    elif not re.fullmatch(r"9\d{8}", telefono):
+        motivos.append("Telefono invalido")
+
+
+def normalizar_fecha_cliente(valor, motivos, cambios):
+    try:
+        fecha = datetime.strptime(
+            valor, "%m/%d/%Y"
+        ).strftime("%Y-%m-%d")
+
+        if fecha != valor:
+            cambios.append("Fecha normalizada a ISO")
+
+        return fecha
+
+    except ValueError:
+        motivos.append("Fecha de registro invalida")
+        return None
+
+
+def validar_cliente_duplicado(conn, email, id_origen, motivos):
+    existente = conn.execute(
+        """
+        SELECT id FROM clientes
+        WHERE email = ? COLLATE NOCASE
+        """,
+        (email,)
+    ).fetchone()
+
+    if existente:
+        motivos.append("Correo duplicado")
+
+    id_existente = conn.execute(
+        """
+        SELECT id FROM clientes
+        WHERE id_origen = ?
+        """,
+        (id_origen,)
+    ).fetchone()
+
+    if id_existente:
+        motivos.append("Identificador duplicado")
+
+
+def insertar_cliente(conn, fila, email, telefono, distrito, fecha):
+    nombre_completo = f"{fila['nombre']} {fila['apellido']}"
+
+    conn.execute(
+        """
+        INSERT INTO clientes
+        (
+            nombre, email, password_hash,
+            telefono, id_origen, distrito,
+            fecha_registro, requiere_activacion
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            nombre_completo,
+            email,
+            "!CUENTA_NO_ACTIVADA",
+            telefono,
+            fila["id_cliente"],
+            distrito,
+            fecha,
+            1
+        )
+    )
 
 
 def migrar_clientes(conn, registros):
@@ -173,112 +302,41 @@ def migrar_clientes(conn, registros):
         cambios = []
 
         id_origen = fila["id_cliente"]
-        nombre = fila["nombre"]
-        apellido = fila["apellido"]
         email = fila["email"].lower()
-
         telefono = fila["telefono"] or None
         distrito = fila["distrito"] or None
 
         if fila != original:
             cambios.append("Espacios normalizados")
 
-        if not id_origen:
-            motivos.append("Identificador vacio")
+        validar_campos_cliente(
+            fila, email, motivos, cambios
+        )
 
-        if not nombre or not apellido:
-            motivos.append("Nombre o apellido vacio")
-
-        if not re.fullmatch(
-            r"[^@\s]+@[^@\s]+\.[^@\s]+",
-            email
-        ):
-            motivos.append("Correo invalido")
-
-        if email != fila["email"]:
-            cambios.append("Correo normalizado")
-
-        if telefono is None:
-            cambios.append("Telefono vacio convertido a NULL")
-
-        elif not re.fullmatch(r"9\d{8}", telefono):
-            motivos.append("Telefono invalido")
+        validar_telefono_cliente(
+            telefono, motivos, cambios
+        )
 
         if distrito is None:
             cambios.append("Distrito vacio convertido a NULL")
 
-        try:
-            fecha = datetime.strptime(
-                fila["fecha_registro"],
-                "%m/%d/%Y"
-            ).strftime("%Y-%m-%d")
+        fecha = normalizar_fecha_cliente(
+            fila["fecha_registro"], motivos, cambios
+        )
 
-            if fecha != fila["fecha_registro"]:
-                cambios.append("Fecha normalizada a ISO")
-
-        except ValueError:
-            motivos.append("Fecha de registro invalida")
-
-        existente = conn.execute(
-            """
-            SELECT id FROM clientes
-            WHERE email = ? COLLATE NOCASE
-            """,
-            (email,)
-        ).fetchone()
-
-        if existente:
-            motivos.append("Correo duplicado")
-
-        id_existente = conn.execute(
-            """
-            SELECT id FROM clientes
-            WHERE id_origen = ?
-            """,
-            (id_origen,)
-        ).fetchone()
-
-        if id_existente:
-            motivos.append("Identificador duplicado")
+        validar_cliente_duplicado(
+            conn, email, id_origen, motivos
+        )
 
         if motivos:
-            rechazar(
-                entidad,
-                id_origen,
-                original,
-                motivos
-            )
+            rechazar(entidad, id_origen, original, motivos)
             continue
 
-        nombre_completo = f"{nombre} {apellido}"
-
-        conn.execute(
-            """
-            INSERT INTO clientes
-            (
-                nombre, email, password_hash,
-                telefono, id_origen, distrito,
-                fecha_registro, requiere_activacion
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                nombre_completo,
-                email,
-                "!CUENTA_NO_ACTIVADA",
-                telefono,
-                id_origen,
-                distrito,
-                fecha,
-                1
-            )
+        insertar_cliente(
+            conn, fila, email, telefono, distrito, fecha
         )
 
-        registrar_carga(
-            entidad,
-            id_origen,
-            cambios
-        )
+        registrar_carga(entidad, id_origen, cambios)
 
 
 def guardar_csv(nombre, registros, campos):
